@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AirGuard — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #04060d;
+      --surface: #0b0f1a;
+      --surface2: #111827;
+      --surface3: #1a2035;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --text: #e8eaf2;
+      --muted: #6b7591;
+      --muted2: #9aa3bc;
+      --accent: #00e5c3;
+      --accent2: #0062ff;
+      --purple: #8b5cf6;
+      --good: #00e400;
+      --moderate: #e8c800;
+      --unhealthy-sens: #ff7e00;
+      --unhealthy: #ff4040;
+      --very-unhealthy: #9b59b6;
+      --hazardous: #7e0023;
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --sidebar-w: 240px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 0;
+      position: fixed; left: 0; top: 0; bottom: 0;
+      z-index: 50;
+    }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 24px 28px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; box-shadow: 0 0 16px rgba(0,229,195,0.25);
+    }
+
+    .nav { flex: 1; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px; cursor: pointer;
+      font-size: 14px; font-weight: 500; color: var(--muted2);
+      transition: all 0.2s; border: none; background: none; width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(0,229,195,0.1); color: var(--accent); }
+    .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+
+    .sidebar-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
+    .user-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px; background: var(--surface2);
+    }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: #04060d; flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-rank { font-size: 11px; color: var(--muted); }
+    .logout-btn {
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      font-size: 16px; padding: 4px; border-radius: 6px; transition: color 0.2s;
+    }
+    .logout-btn:hover { color: var(--text); }
+
+    /* ── Main content ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1; height: 100vh; overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 40;
+      background: rgba(4,6,13,0.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(0,229,195,0.1); border: 1px solid rgba(0,229,195,0.2);
+      border-radius: 100px; padding: 5px 12px; font-size: 12px; color: var(--accent);
+    }
+    .live-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ── Content panels ── */
+    .panel { display: none; padding: 32px; flex-direction: column; gap: 28px; }
+    .panel.active { display: flex; }
+
+    /* ── Overview panel ── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      position: relative; overflow: hidden; transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--border2); }
+    .stat-card::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .stat-card-label { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+    .stat-card-val { font-family: var(--font-display); font-size: 36px; font-weight: 800; line-height: 1; }
+    .stat-card-sub { font-size: 13px; color: var(--muted); }
+    .stat-card-icon { position: absolute; top: 20px; right: 20px; font-size: 28px; opacity: 0.2; }
+
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+    }
+    .chart-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 20px; }
+    .chart-container { position: relative; height: 200px; }
+
+    .recent-table-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    }
+    .card-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 24px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 24px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── Risk badges ── */
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    }
+    .risk-LOW { background: rgba(0,228,0,0.1); color: #00e400; }
+    .risk-MODERATE { background: rgba(232,200,0,0.1); color: #e8c800; }
+    .risk-HIGH { background: rgba(255,64,64,0.1); color: #ff4040; }
+    .risk-VERY_HIGH { background: rgba(126,0,35,0.15); color: #ff6080; }
+
+    /* ── Calculate panel ── */
+    .calc-layout { display: grid; grid-template-columns: 1fr 400px; gap: 24px; align-items: start; }
+    .calc-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px;
+    }
+    .calc-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .calc-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field.span2 { grid-column: span 2; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+    .field input, .field select {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+      color: var(--text); font-family: var(--font-body); font-size: 14px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+    }
+    .field select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7591' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,195,0.1); }
+
+    .location-row { display: flex; gap: 10px; }
+    .location-row input { flex: 1; }
+    .btn-locate {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 16px; color: var(--muted2); cursor: pointer; font-size: 18px;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-locate:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 10px; padding: 14px 24px;
+      color: #04060d; font-family: var(--font-display); font-size: 15px; font-weight: 700;
+      cursor: pointer; width: 100%; margin-top: 8px; transition: all 0.2s; letter-spacing: 0.3px;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,195,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Result card */
+    .result-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      overflow: hidden; transition: all 0.3s;
+    }
+    .result-header { padding: 24px; border-bottom: 1px solid var(--border); }
+    .result-aqi-display {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .result-aqi-val {
+      font-family: var(--font-display); font-size: 64px; font-weight: 800; line-height: 1;
+    }
+    .result-gauge { width: 100px; height: 100px; }
+    .result-meta { display: flex; flex-direction: column; gap: 4px; }
+    .result-city { font-size: 13px; color: var(--muted); }
+    .result-category { font-size: 14px; font-weight: 600; }
+
+    .result-stats { padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-bottom: 1px solid var(--border); }
+    .result-stat { display: flex; flex-direction: column; gap: 2px; }
+    .result-stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .result-stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+
+    .result-recs { padding: 20px 24px; }
+    .result-recs-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .rec-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--muted2); margin-bottom: 8px; line-height: 1.5; }
+    .rec-bullet { color: var(--accent); margin-top: 4px; font-size: 8px; flex-shrink: 0; }
+
+    .xp-earned { padding: 16px 24px; background: rgba(0,229,195,0.05); border-top: 1px solid rgba(0,229,195,0.15); display: flex; align-items: center; justify-content: space-between; }
+    .xp-earned-label { font-size: 13px; color: var(--muted); }
+    .xp-earned-val { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--accent); }
+
+    /* Empty state */
+    .empty-result {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 48px 24px; text-align: center; gap: 12px;
+    }
+    .empty-icon { font-size: 48px; opacity: 0.3; }
+    .empty-text { font-size: 14px; color: var(--muted); }
+
+    /* ── Achievements panel ── */
+    .achievements-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .achievement-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s;
+    }
+    .achievement-card.unlocked { border-color: rgba(0,229,195,0.3); }
+    .achievement-card.locked { opacity: 0.5; }
+    .ach-icon { font-size: 32px; }
+    .ach-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+    .ach-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .ach-progress { display: flex; flex-direction: column; gap: 6px; }
+    .progress-bar { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 1s ease; }
+    .progress-text { font-size: 12px; color: var(--muted); }
+
+    /* ── Profile panel ── */
+    .profile-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+    .profile-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 28px; color: #04060d;
+      box-shadow: 0 0 32px rgba(0,229,195,0.3);
+    }
+    .profile-username { font-family: var(--font-display); font-size: 24px; font-weight: 800; }
+    .profile-rank { font-size: 14px; color: var(--accent); }
+    .level-bar-wrap { width: 100%; }
+    .level-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .level-bar { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+    .level-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1.5s ease; }
+    .profile-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .profile-stat { background: var(--surface2); border-radius: 12px; padding: 16px; text-align: center; }
+    .profile-stat-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+    .profile-stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── History panel ── */
+    .history-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    }
+
+    /* ── Toast ── */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 14px 20px; min-width: 280px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease; pointer-events: none;
+    }
+    .toast.success { border-left: 3px solid var(--accent); }
+    .toast.error { border-left: 3px solid #ff4d6d; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ── Loading ── */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Gauge SVG ── */
+    .gauge-svg { transform: rotate(-90deg); }
+
+    /* ── Search city ── */
+    .search-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; margin-top: 4px; overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .search-option {
+      padding: 12px 16px; cursor: pointer; font-size: 14px;
+      transition: background 0.15s; border-bottom: 1px solid var(--border);
+    }
+    .search-option:last-child { border-bottom: none; }
+    .search-option:hover { background: var(--surface3); }
+    .search-option-name { font-weight: 500; }
+    .search-option-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .field-wrap { position: relative; }
+
+    @media (max-width: 1200px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-row { grid-template-columns: 1fr; }
+      .calc-layout { grid-template-columns: 1fr; }
+      .achievements-grid { grid-template-columns: repeat(2, 1fr); }
+      .profile-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🌬️</div>
+      AirGuard
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="showPanel('overview')">
+        <span class="nav-icon">📊</span> Overview
+      </button>
+      <button class="nav-item" onclick="showPanel('calculate')">
+        <span class="nav-icon">🧮</span> Calculate
+      </button>
+      <button class="nav-item" onclick="showPanel('history')">
+        <span class="nav-icon">📋</span> History
+      </button>
+      <button class="nav-item" onclick="showPanel('achievements')">
+        <span class="nav-icon">🏆</span> Achievements
+      </button>
+      <button class="nav-item" onclick="showPanel('profile')">
+        <span class="nav-icon">👤</span> Profile
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-card">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-username">Loading...</div>
+          <div class="user-rank" id="sidebar-rank">—</div>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Logout">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="panel-title">Overview</div>
+      <div class="topbar-right">
+        <div class="live-badge"><div class="live-dot"></div> Live Data</div>
+        <span id="topbar-xp" style="font-family:var(--font-display);font-size:14px;color:var(--accent)">0 XP</span>
+      </div>
+    </div>
+
+    <!-- Overview Panel -->
+    <div class="panel active" id="panel-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-card-label">Avg AQI (7 days)</span>
+          <span class="stat-card-val" id="stat-aqi7" style="color:var(--accent)">—</span>
+          <span class="stat-card-sub" id="stat-aqi7-cat">Loading...</span>
+          <span class="stat-card-icon">🌫️</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Total Activities</span>
+          <span class="stat-card-val" id="stat-total" style="color:var(--accent2)">—</span>
+          <span class="stat-card-sub">Logged checks</span>
+          <span class="stat-card-icon">📍</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Current Level</span>
+          <span class="stat-card-val" id="stat-level" style="color:var(--purple)">—</span>
+          <span class="stat-card-sub" id="stat-rank">Air Rookie</span>
+          <span class="stat-card-icon">⭐</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card-label">Streak</span>
+          <span class="stat-card-val" id="stat-streak" style="color:#f97316">—</span>
+          <span class="stat-card-sub">Days in a row</span>
+          <span class="stat-card-icon">🔥</span>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">7-Day AQI Trend</div>
+          <div class="chart-container"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Risk Distribution</div>
+          <div class="chart-container"><canvas id="riskChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="recent-table-card">
+        <div class="card-header">
+          <div class="card-title">Recent Activities</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Activity</th>
+                <th>AQI</th>
+                <th>Exposure Score</th>
+                <th>Risk</th>
+                <th>XP</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="recent-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculate Panel -->
+    <div class="panel" id="panel-calculate">
+      <div class="calc-layout">
+        <div class="calc-card">
+          <div class="calc-title">Calculate Exposure</div>
+          <div class="calc-sub">Enter your location and activity to compute your personalized pollution exposure score.</div>
+
+          <div class="form-grid">
+            <!-- Location search -->
+            <div class="field span2">
+              <label>Search City</label>
+              <div class="field-wrap">
+                <input type="text" id="city-search" placeholder="Type city name..." oninput="onCitySearch(this.value)"/>
+                <div class="search-dropdown" id="city-dropdown" style="display:none"></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Latitude</label>
+              <div class="location-row">
+                <input type="number" id="latitude" placeholder="18.5204" step="0.0001" value="18.5204"/>
+                <button class="btn-locate" onclick="getLocation()" title="Use my location">📍</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Longitude</label>
+              <input type="number" id="longitude" placeholder="73.8567" step="0.0001" value="73.8567"/>
+            </div>
+
+            <div class="field">
+              <label>Activity Type</label>
+              <select id="activity-type">
+                <option value="RUNNING">🏃 Running (×2.5)</option>
+                <option value="HIKING">🥾 Hiking (×2.2)</option>
+                <option value="CYCLING">🚴 Cycling (×2.0)</option>
+                <option value="WALKING" selected>🚶 Walking (×1.5)</option>
+                <option value="YOGA">🧘 Yoga (×1.3)</option>
+                <option value="SITTING">💺 Sitting (×1.0)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Health Profile</label>
+              <select id="health-profile">
+                <option value="NORMAL" selected>🧑 Normal Adult (×1.0)</option>
+                <option value="ASTHMATIC">😮‍💨 Asthmatic (×2.0)</option>
+                <option value="CHILD">👶 Child (×1.6)</option>
+                <option value="ELDERLY">👴 Elderly (×1.5)</option>
+              </select>
+            </div>
+
+            <div class="field span2">
+              <label>Duration (hours)</label>
+              <input type="range" id="duration" min="0.5" max="8" step="0.5" value="1"
+                oninput="document.getElementById('duration-val').textContent = this.value + ' hr'" style="width:100%;accent-color:var(--accent)"/>
+              <span id="duration-val" style="font-size:13px;color:var(--muted)">1 hr</span>
+            </div>
+
+            <div class="field span2">
+              <button class="btn-primary" id="calc-btn" onclick="doCalculate()">
+                Calculate Exposure Score →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result card -->
+        <div class="result-card" id="result-card">
+          <div class="empty-result">
+            <div class="empty-icon">🌬️</div>
+            <div class="empty-text">Fill in the form and click Calculate<br/>to see your exposure score.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="panel" id="panel-history">
+      <div class="history-card">
+        <div class="card-header">
+          <div class="card-title">Full Activity History</div>
+          <span style="font-size:13px;color:var(--muted)" id="history-count">0 records</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Location</th>
+                <th>Activity</th>
+                <th>Health</th>
+                <th>Duration</th>
+                <th>AQI</th>
+                <th>PM2.5</th>
+                <th>Exposure</th>
+                <th>Risk</th>
+                <th>XP</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements Panel -->
+    <div class="panel" id="panel-achievements">
+      <div class="achievements-grid" id="achievements-grid">
+        <div style="color:var(--muted)">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Profile Panel -->
+    <div class="panel" id="panel-profile">
+      <div class="profile-layout">
+        <div class="profile-card">
+          <div class="profile-avatar" id="profile-avatar">?</div>
+          <div class="profile-username" id="profile-username">—</div>
+          <div class="profile-rank" id="profile-rank">—</div>
+          <div class="level-bar-wrap">
+            <div class="level-bar-label">
+              <span id="profile-level-label">Level 1</span>
+              <span id="profile-xp-label">0 / 50 XP</span>
+            </div>
+            <div class="level-bar"><div class="level-fill" id="profile-level-fill" style="width:0%"></div></div>
+          </div>
+          <div class="profile-stats">
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-total-xp" style="color:var(--accent)">0</div>
+              <div class="profile-stat-label">Total XP</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-level" style="color:var(--accent2)">1</div>
+              <div class="profile-stat-label">Level</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-streak" style="color:#f97316">0</div>
+              <div class="profile-stat-label">Streak Days</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-val" id="p-activities" style="color:var(--purple)">0</div>
+              <div class="profile-stat-label">Activities</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="chart-card">
+            <div class="chart-title">30-Day AQI History</div>
+            <div class="chart-container"><canvas id="profileChart"></canvas></div>
+          </div>
+          <div class="calc-card" style="padding:24px">
+            <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:16px">Account Info</div>
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+              <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--muted)">Email</span>
+                <span id="p-email">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--muted)">Member since</span>
+                <span id="p-since">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:12px 0">
+                <span style="color:var(--muted)">Low risk sessions</span>
+                <span id="p-low-risk" style="color:var(--good)">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toasts"></div>
+
+  <script>
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const API = 'http://localhost:8080/api';
+    let trendChartInst = null;
+    let riskChartInst = null;
+    let profileChartInst = null;
+    let dashData = null;
+    let citySearchTimer = null;
+
+    // ── Auth helpers ───────────────────────────────────────────────────────────
+    function getToken() { return localStorage.getItem('ag_access'); }
+    function getUser() { try { return JSON.parse(localStorage.getItem('ag_user') || '{}'); } catch { return {}; } }
+
+    async function apiFetch(path, opts = {}) {
+      let token = getToken();
+      const res = await fetch(`${API}${path}`, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...(opts.headers || {})
+        }
+      });
+      if (res.status === 401) {
+        // Try refresh
+        try {
+          const rToken = localStorage.getItem('ag_refresh');
+          const r2 = await fetch(`${API}/auth/refresh`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({refreshToken: rToken})
+          });
+          if (r2.ok) {
+            const d = await r2.json();
+            localStorage.setItem('ag_access', d.accessToken);
+            localStorage.setItem('ag_user', JSON.stringify(d.user));
+            // Retry
+            return fetch(`${API}${path}`, {
+              ...opts,
+              headers: {'Content-Type':'application/json','Authorization':`Bearer ${d.accessToken}`,...(opts.headers||{})}
+            });
+          }
+        } catch {}
+        logout(); return null;
+      }
+      return res;
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    // ── UI helpers ─────────────────────────────────────────────────────────────
+    function toast(msg, type = 'success') {
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span><span>${msg}</span>`;
+      document.getElementById('toasts').appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
+
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`panel-${name}`).classList.add('active');
+      event.currentTarget.classList.add('active');
+      const titles = {overview:'Overview',calculate:'Calculate Exposure',history:'History',achievements:'Achievements',profile:'Profile'};
+      document.getElementById('panel-title').textContent = titles[name] || name;
+      if (name === 'history') loadHistory();
+      if (name === 'profile') loadProfile();
+      if (name === 'achievements') renderAchievements();
+    }
+
+    function aqiColor(aqi) {
+      if (aqi <= 50) return '#00e400';
+      if (aqi <= 100) return '#e8c800';
+      if (aqi <= 150) return '#ff7e00';
+      if (aqi <= 200) return '#ff4040';
+      if (aqi <= 300) return '#9b59b6';
+      return '#7e0023';
+    }
+
+    function riskBadge(r) {
+      const labels = {LOW:'Low',MODERATE:'Moderate',HIGH:'High',VERY_HIGH:'Very High'};
+      return `<span class="risk-badge risk-${r}">${labels[r]||r}</span>`;
+    }
+
+    function formatDate(s) {
+      if (!s) return '—';
+      return new Date(s).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+    }
+
+    // ── Bootstrap ──────────────────────────────────────────────────────────────
+    async function init() {
+      if (!getToken()) { window.location.href = 'index.html'; return; }
+      const user = getUser();
+      if (user.username) {
+        document.getElementById('sidebar-avatar').textContent = user.username[0].toUpperCase();
+        document.getElementById('sidebar-username').textContent = user.username;
+        document.getElementById('sidebar-rank').textContent = user.rank || 'Air Rookie';
+        document.getElementById('topbar-xp').textContent = (user.xp || 0) + ' XP';
+      }
+      await loadDashboard();
+    }
+
+    // ── Dashboard ──────────────────────────────────────────────────────────────
+    async function loadDashboard() {
+      try {
+        const res = await apiFetch('/exposure/dashboard');
+        if (!res || !res.ok) return;
+        dashData = await res.json();
+        renderOverview(dashData);
+      } catch(e) { console.error('Dashboard load failed', e); }
+    }
+
+    function renderOverview(d) {
+      document.getElementById('stat-aqi7').textContent = d.avgAqi7Days || '—';
+      document.getElementById('stat-aqi7-cat').textContent = aqiCat(d.avgAqi7Days);
+      document.getElementById('stat-total').textContent = d.totalActivities;
+      document.getElementById('stat-level').textContent = d.currentLevel;
+      document.getElementById('stat-rank').textContent = d.rank;
+      document.getElementById('stat-streak').textContent = d.streakDays;
+      document.getElementById('topbar-xp').textContent = d.totalXp + ' XP';
+      document.getElementById('sidebar-rank').textContent = d.rank;
+
+      // Trend chart
+      const trendLabels = (d.weeklyAqiTrend || []).map(w => w.date.substring(5));
+      const trendVals = (d.weeklyAqiTrend || []).map(w => w.avgAqi);
+      const trendColors = trendVals.map(v => aqiColor(v));
+
+      if (trendChartInst) trendChartInst.destroy();
+      const ctx1 = document.getElementById('trendChart').getContext('2d');
+      const grad = ctx1.createLinearGradient(0,0,0,200);
+      grad.addColorStop(0,'rgba(0,229,195,0.3)');
+      grad.addColorStop(1,'rgba(0,229,195,0)');
+      trendChartInst = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: trendLabels,
+          datasets: [{
+            label: 'AQI', data: trendVals,
+            borderColor: '#00e5c3', backgroundColor: grad,
+            borderWidth: 2, pointRadius: 4, pointBackgroundColor: trendColors,
+            fill: true, tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7591' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7591' }, min: 0 }
+          }
+        }
+      });
+
+      // Risk chart
+      const riskDist = d.riskDistribution || {};
+      const rKeys = ['LOW','MODERATE','HIGH','VERY_HIGH'];
+      const rVals = rKeys.map(k => riskDist[k] || 0);
+      const rColors = ['#00e400','#e8c800','#ff4040','#9b59b6'];
+
+      if (riskChartInst) riskChartInst.destroy();
+      riskChartInst = new Chart(document.getElementById('riskChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Low','Moderate','High','Very High'],
+          datasets: [{ data: rVals, backgroundColor: rColors, borderWidth: 0, hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#9aa3bc', padding: 16, font: {size:13} } }
+          },
+          cutout: '65%'
+        }
+      });
+
+      // Recent table
+      const tbody = document.getElementById('recent-tbody');
+      const acts = d.recentActivities || [];
+      if (acts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No activities yet. Go to <strong>Calculate</strong> to log your first check!</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = acts.map(a => `
+        <tr>
+          <td>${a.cityName || '—'}</td>
+          <td>${a.activityType?.toLowerCase().replace(/_/g,' ') || '—'}</td>
+          <td><span style="color:${aqiColor(a.aqi)};font-weight:600">${a.aqi?.toFixed(0)}</span></td>
+          <td>${a.exposureScore?.toFixed(0)}</td>
+          <td>${riskBadge(a.riskLevel)}</td>
+          <td style="color:var(--accent);font-weight:600">+${a.xpEarned}</td>
+          <td style="color:var(--muted)">${formatDate(a.createdAt)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function aqiCat(aqi) {
+      if (!aqi) return '—';
+      if (aqi <= 50) return 'Good';
+      if (aqi <= 100) return 'Moderate';
+      if (aqi <= 150) return 'Unhealthy for Sensitive';
+      if (aqi <= 200) return 'Unhealthy';
+      if (aqi <= 300) return 'Very Unhealthy';
+      return 'Hazardous';
+    }
+
+    // ── Calculate ──────────────────────────────────────────────────────────────
+    function getLocation() {
+      if (!navigator.geolocation) { toast('Geolocation not supported', 'error'); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('latitude').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('longitude').value = pos.coords.longitude.toFixed(6);
+        toast('Location detected!');
+      }, () => toast('Location access denied', 'error'));
+    }
+
+    async function onCitySearch(q) {
+      clearTimeout(citySearchTimer);
+      const dd = document.getElementById('city-dropdown');
+      if (q.length < 2) { dd.style.display = 'none'; return; }
+      citySearchTimer = setTimeout(async () => {
+        try {
+          const res = await apiFetch(`/aqi/search?q=${encodeURIComponent(q)}`);
+          if (!res || !res.ok) return;
+          const results = await res.json();
+          if (results.length === 0) { dd.style.display = 'none'; return; }
+          dd.innerHTML = results.map(r => `
+            <div class="search-option" onclick="selectCity(${r.latitude},${r.longitude},'${r.name}')">
+              <div class="search-option-name">${r.name}</div>
+              <div class="search-option-sub">${[r.admin1, r.country].filter(Boolean).join(', ')}</div>
+            </div>
+          `).join('');
+          dd.style.display = 'block';
+        } catch {}
+      }, 400);
+    }
+
+    function selectCity(lat, lon, name) {
+      document.getElementById('latitude').value = lat;
+      document.getElementById('longitude').value = lon;
+      document.getElementById('city-search').value = name;
+      document.getElementById('city-dropdown').style.display = 'none';
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.field-wrap')) {
+        document.getElementById('city-dropdown').style.display = 'none';
+      }
+    });
+
+    async function doCalculate() {
+      const btn = document.getElementById('calc-btn');
+      const lat = parseFloat(document.getElementById('latitude').value);
+      const lon = parseFloat(document.getElementById('longitude').value);
+      const activityType = document.getElementById('activity-type').value;
+      const healthProfile = document.getElementById('health-profile').value;
+      const durationHours = parseFloat(document.getElementById('duration').value);
+
+      if (isNaN(lat) || isNaN(lon)) { toast('Please enter valid coordinates', 'error'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Calculating...';
+
+      try {
+        const res = await apiFetch('/exposure/calculate', {
+          method: 'POST',
+          body: JSON.stringify({latitude:lat, longitude:lon, activityType, healthProfile, durationHours})
+        });
+        if (!res || !res.ok) {
+          const err = await res?.json();
+          toast(err?.message || 'Calculation failed', 'error');
+          return;
+        }
+        const data = await res.json();
+        renderResult(data);
+        toast(`+${data.xpEarned} XP earned!`);
+        loadDashboard(); // Refresh stats
+      } catch(e) {
+        toast('Server error. Check backend is running.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Calculate Exposure Score →';
+      }
+    }
+
+    function renderResult(d) {
+      const color = aqiColor(d.aqi);
+      const riskLabels = {LOW:'Low Risk',MODERATE:'Moderate Risk',HIGH:'High Risk',VERY_HIGH:'Very High Risk'};
+      const riskEmojis = {LOW:'🟢',MODERATE:'🟡',HIGH:'🔴',VERY_HIGH:'🟣'};
+
+      const recs = (d.recommendations || []).map(r =>
+        `<div class="rec-item"><span class="rec-bullet">●</span>${r}</div>`
+      ).join('');
+
+      // SVG gauge
+      const pct = Math.min(d.aqi / 500, 1);
+      const r = 44, circ = 2 * Math.PI * r;
+      const dash = pct * circ;
+
+      document.getElementById('result-card').innerHTML = `
+        <div class="result-header">
+          <div class="result-aqi-display">
+            <div>
+              <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">US AQI</div>
+              <div class="result-aqi-val" style="color:${color}">${d.aqi?.toFixed(0)}</div>
+              <div style="font-size:13px;color:var(--muted);margin-top:4px">${d.cityName || 'Your location'}</div>
+            </div>
+            <svg class="result-gauge" width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="8"
+                stroke-dasharray="${dash} ${circ}" stroke-linecap="round"
+                style="transition:stroke-dasharray 1s ease"/>
+              <text x="50" y="55" text-anchor="middle" fill="${color}" font-size="16" font-weight="700" transform="rotate(90 50 50)">${d.aqi?.toFixed(0)}</text>
+            </svg>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="risk-badge risk-${d.riskLevel}" style="font-size:13px">${riskEmojis[d.riskLevel]} ${riskLabels[d.riskLevel]}</span>
+          </div>
+        </div>
+
+        <div class="result-stats">
+          <div class="result-stat">
+            <span class="result-stat-label">PM2.5</span>
+            <span class="result-stat-val" style="color:${color}">${d.pm25?.toFixed(1)} <small style="font-size:12px;font-weight:400;color:var(--muted)">µg/m³</small></span>
+          </div>
+          <div class="result-stat">
+            <span class="result-stat-label">PM10</span>
+            <span class="result-stat-val" style="color:${color}">${d.pm10?.toFixed(1)} <small style="font-size:12px;font-weight:400;color:var(--muted)">µg/m³</small></span>
+          </div>
+          <div class="result-stat">
+            <span class="result-stat-label">Exposure Score</span>
+            <span class="result-stat-val" style="color:var(--text)">${d.exposureScore?.toFixed(0)}</span>
+          </div>
+          <div class="result-stat">
+            <span class="result-stat-label">Duration</span>
+            <span class="result-stat-val" style="color:var(--text)">${d.durationHours}h</span>
+          </div>
+          <div class="result-stat">
+            <span class="result-stat-label">Activity ×</span>
+            <span class="result-stat-val" style="color:var(--accent2)">${d.activityMultiplier}</span>
+          </div>
+          <div class="result-stat">
+            <span class="result-stat-label">Vulnerability ×</span>
+            <span class="result-stat-val" style="color:var(--purple)">${d.vulnerabilityMultiplier}</span>
+          </div>
+        </div>
+
+        <div class="result-recs">
+          <div class="result-recs-title">Recommendations</div>
+          ${recs}
+        </div>
+
+        <div class="xp-earned">
+          <span class="xp-earned-label">🎮 XP Earned this check</span>
+          <span class="xp-earned-val">+${d.xpEarned} XP</span>
+        </div>
+      `;
+    }
+
+    // ── History ────────────────────────────────────────────────────────────────
+    async function loadHistory() {
+      const tbody = document.getElementById('history-tbody');
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:24px"><span class="spinner" style="color:var(--accent)"></span></td></tr>`;
+      try {
+        const res = await apiFetch('/exposure/history');
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        document.getElementById('history-count').textContent = data.length + ' records';
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">No history yet.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map((a, i) => `
+          <tr>
+            <td style="color:var(--muted)">${i+1}</td>
+            <td>${a.cityName || '—'}</td>
+            <td style="text-transform:capitalize">${a.activityType?.toLowerCase().replace(/_/g,' ')}</td>
+            <td>—</td>
+            <td>${a.durationHours}h</td>
+            <td><span style="color:${aqiColor(a.aqi)};font-weight:600">${a.aqi?.toFixed(0)}</span></td>
+            <td>—</td>
+            <td>${a.exposureScore?.toFixed(0)}</td>
+            <td>${riskBadge(a.riskLevel)}</td>
+            <td style="color:var(--accent)">+${a.xpEarned}</td>
+            <td style="color:var(--muted)">${formatDate(a.createdAt)}</td>
+          </tr>
+        `).join('');
+      } catch(e) { toast('Failed to load history', 'error'); }
+    }
+
+    // ── Achievements ───────────────────────────────────────────────────────────
+    function renderAchievements() {
+      if (!dashData) { loadDashboard().then(() => renderAchievements()); return; }
+      const grid = document.getElementById('achievements-grid');
+      const achs = dashData.achievements || [];
+      if (!achs.length) { grid.innerHTML = '<div style="color:var(--muted)">No achievements data.</div>'; return; }
+      grid.innerHTML = achs.map(a => `
+        <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
+          <div class="ach-icon">${a.icon}</div>
+          <div>
+            <div class="ach-title">${a.title} ${a.unlocked ? '✓' : ''}</div>
+            <div class="ach-desc">${a.description}</div>
+          </div>
+          <div class="ach-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${(a.progress/a.target*100).toFixed(0)}%"></div>
+            </div>
+            <div class="progress-text">${a.progress} / ${a.target}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── Profile ────────────────────────────────────────────────────────────────
+    async function loadProfile() {
+      try {
+        const res = await apiFetch('/auth/me');
+        if (!res || !res.ok) return;
+        const u = await res.json();
+        const initial = u.username?.[0]?.toUpperCase() || '?';
+
+        document.getElementById('profile-avatar').textContent = initial;
+        document.getElementById('profile-username').textContent = u.username;
+        document.getElementById('profile-rank').textContent = u.rank;
+        document.getElementById('p-total-xp').textContent = u.xp;
+        document.getElementById('p-level').textContent = u.level;
+        document.getElementById('p-streak').textContent = u.streakDays;
+        document.getElementById('p-email').textContent = u.email;
+        document.getElementById('p-since').textContent = formatDate(u.createdAt);
+        document.getElementById('profile-level-label').textContent = 'Level ' + u.level;
+
+        // XP progress calculation: level n needs 50*(n-1)^2 XP
+        const xpForLevel = n => 50 * (n-1) * (n-1);
+        const curr = xpForLevel(u.level);
+        const next = xpForLevel(u.level + 1);
+        const pct = next > curr ? ((u.xp - curr) / (next - curr) * 100).toFixed(0) : 100;
+        document.getElementById('profile-xp-label').textContent = `${u.xp - curr} / ${next - curr} XP`;
+        document.getElementById('profile-level-fill').style.width = pct + '%';
+
+        if (dashData) {
+          document.getElementById('p-activities').textContent = dashData.totalActivities;
+          document.getElementById('p-low-risk').textContent = dashData.lowRiskCount + ' sessions';
+
+          // 30-day trend chart
+          if (profileChartInst) profileChartInst.destroy();
+          const trend = dashData.weeklyAqiTrend || [];
+          profileChartInst = new Chart(document.getElementById('profileChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: trend.map(t => t.date.substring(5)),
+              datasets: [{
+                label: 'AQI', data: trend.map(t => t.avgAqi),
+                backgroundColor: trend.map(t => aqiColor(t.avgAqi) + '99'),
+                borderColor: trend.map(t => aqiColor(t.avgAqi)),
+                borderWidth: 1, borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7591' } },
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7591' }, min: 0 }
+              }
+            }
+          });
+        }
+      } catch(e) { console.error('Profile load error', e); }
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>

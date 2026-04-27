@@ -1,0 +1,33 @@
+{
+  "nodes": [],
+  "edges": [],
+  "metadata": {
+    "generated_at": "2026-04-23T16:09:18.617Z",
+    "workspace_root": "c:\\Users\\Saksham Midha\\OneDrive\\เอกสาร\\files\\airguard-java\\airguard",
+    "node_count": 0,
+    "edge_count": 0,
+    "stack": "Mixed · imports: relative imports",
+    "file_hash": "da39a3ee5e6b4b0d",
+    "confidence_counts": {
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "intelligence": {
+    "codeGraph": {
+      "nodes": [],
+      "edges": []
+    },
+    "debugLog": [
+      "git coupling scores: 0",
+      "AST extraction summary: files=0",
+      "functions parsed: 0",
+      "call edges created: 0",
+      "resolved calls: 0",
+      "calls ignored: 0",
+      "dependency edges: 0",
+      "git coupling edges: 0"
+    ]
+  }
+}
