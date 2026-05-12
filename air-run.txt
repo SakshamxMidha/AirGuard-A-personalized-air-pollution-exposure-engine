@@ -1,0 +1,5 @@
+cd backend
+mvn package -DskipTests
+java -jar target/airguard-backend-1.0.0.jar
+
+mvn spring-boot:run
