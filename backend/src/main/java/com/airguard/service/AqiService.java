@@ -192,28 +192,32 @@ public class AqiService {
     }
 
     @Cacheable(value = "reverse-geocoding", key = "#lat + ',' + #lon")
-    public String reverseGeocode(double lat, double lon) {
-        try {
-            String url = String.format(
-                "%s/reverse?lat=%.6f&lon=%.6f&format=json",
-                props.getApi().getNominatim().getUrl(), lat, lon
-            );
-            String response = restTemplate.getForObject(url, String.class);
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode address = root.get("address");
-            if (address != null) {
-                if (address.has("city")) return address.get("city").asText();
-                if (address.has("town")) return address.get("town").asText();
-                if (address.has("village")) return address.get("village").asText();
-                if (address.has("county")) return address.get("county").asText();
-            }
-            return root.has("display_name") ? root.get("display_name").asText().split(",")[0] : "Unknown";
-        } catch (Exception e) {
-            log.debug("Reverse geocoding failed: {}", e.getMessage());
-            return "Unknown Location";
+public String reverseGeocode(double lat, double lon) {
+    try {
+        String url = String.format(
+            "%s/reverse?lat=%.6f&lon=%.6f&format=json",
+            props.getApi().getNominatim().getUrl(), lat, lon
+        );
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.set("User-Agent", "AirGuard/1.0 (https://airguard-a-personalized-air-pollution.onrender.com)");
+        org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+        org.springframework.http.ResponseEntity<String> resp = restTemplate.exchange(
+            url, org.springframework.http.HttpMethod.GET, entity, String.class
+        );
+        JsonNode root = objectMapper.readTree(resp.getBody());
+        JsonNode address = root.get("address");
+        if (address != null) {
+            if (address.has("city")) return address.get("city").asText();
+            if (address.has("town")) return address.get("town").asText();
+            if (address.has("village")) return address.get("village").asText();
+            if (address.has("county")) return address.get("county").asText();
         }
+        return root.has("display_name") ? root.get("display_name").asText().split(",")[0] : "Unknown";
+    } catch (Exception e) {
+        log.debug("Reverse geocoding failed: {}", e.getMessage());
+        return "Unknown Location";
     }
-
+}
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private double getDouble(JsonNode arr, int index, double fallback) {
