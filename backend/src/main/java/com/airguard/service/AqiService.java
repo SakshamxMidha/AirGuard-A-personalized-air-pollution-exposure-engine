@@ -78,9 +78,12 @@ public class AqiService {
                 .build());
         }
 
+        String cityName = reverseGeocode(lat, lon);
+
         return AqiResponse.builder()
             .latitude(lat)
             .longitude(lon)
+            .cityName(cityName)
             .usAqi(aqi)
             .pm25(pm25)
             .pm10(pm10)
